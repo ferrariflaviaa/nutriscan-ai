@@ -3,26 +3,23 @@ import path from "path";
 
 const ROOT = process.cwd();
 
-const AUGMENTED =
-  path.join(
-    ROOT,
-    "dataset",
-    "augmented"
-  );
+const SOURCE = path.join(
+  ROOT,
+  "dataset",
+  "prepared"
+);
 
-const PREPARED =
-  path.join(
-    ROOT,
-    "dataset",
-    "prepared"
-  );
+const DESTINATION = path.join(
+  ROOT,
+  "public",
+  "training-data"
+);
 
-const DESTINATION =
-  path.join(
-    ROOT,
-    "public",
-    "training-data"
-  );
+const SPLITS = [
+  "train",
+  "valid",
+  "test"
+];
 
 const CLASSES = [
   "nutrition-label",
@@ -30,9 +27,7 @@ const CLASSES = [
 ];
 
 function ehImagem(nome) {
-  return /\.(jpg|jpeg|png|webp)$/i.test(
-    nome
-  );
+  return /\.(jpg|jpeg|png|webp)$/i.test(nome);
 }
 
 function criarPasta(caminho) {
@@ -44,11 +39,8 @@ function criarPasta(caminho) {
   );
 }
 
-if (
-  fs.existsSync(
-    DESTINATION
-  )
-) {
+if (fs.existsSync(DESTINATION)) {
+
   fs.rmSync(
     DESTINATION,
     {
@@ -56,11 +48,10 @@ if (
       force: true
     }
   );
+
 }
 
-criarPasta(
-  DESTINATION
-);
+criarPasta(DESTINATION);
 
 const manifest = {
   train: {
@@ -79,47 +70,34 @@ const manifest = {
   }
 };
 
-function copiarSplit(
-  split,
-  origemBase
-) {
-  console.log(
-    `\nExportando ${split}...`
-  );
+for (const split of SPLITS) {
 
-  for (
-    const classe of CLASSES
-  ) {
-    const origem =
-      path.join(
-        origemBase,
-        split,
-        classe
-      );
+  console.log(`\nExportando ${split}...`);
 
-    const destino =
-      path.join(
-        DESTINATION,
-        split,
-        classe
-      );
+  for (const classe of CLASSES) {
 
-    criarPasta(
-      destino
+    const origem = path.join(
+      SOURCE,
+      split,
+      classe
     );
 
-    const arquivos =
-      fs
-        .readdirSync(
-          origem
-        )
-        .filter(
-          ehImagem
-        );
+    const destino = path.join(
+      DESTINATION,
+      split,
+      classe
+    );
 
-    for (
-      const arquivo of arquivos
-    ) {
+    criarPasta(destino);
+
+    // sort() garante ordem estável.
+    const arquivos = fs
+      .readdirSync(origem)
+      .filter(ehImagem)
+      .sort();
+
+    for (const arquivo of arquivos) {
+
       fs.copyFileSync(
         path.join(
           origem,
@@ -137,48 +115,16 @@ function copiarSplit(
           arquivo
         )}`
       );
+
     }
 
     console.log(
       `${classe}: ${arquivos.length}`
     );
+
   }
+
 }
-
-
-// ======================================
-// TRAIN usa AUGMENTED
-// ======================================
-
-copiarSplit(
-  "train",
-  AUGMENTED
-);
-
-
-// ======================================
-// VALID continua ORIGINAL
-// ======================================
-
-copiarSplit(
-  "valid",
-  PREPARED
-);
-
-
-// ======================================
-// TEST continua ORIGINAL
-// ======================================
-
-copiarSplit(
-  "test",
-  PREPARED
-);
-
-
-// ======================================
-// MANIFEST
-// ======================================
 
 fs.writeFileSync(
   path.join(
@@ -193,20 +139,15 @@ fs.writeFileSync(
   )
 );
 
-
 console.log(
-  "\n✅ Dataset exportado!"
-);
-
-console.log(
-  "\nResumo:"
+  "\n✅ Dataset original exportado."
 );
 
 console.log(
   JSON.stringify(
     {
       train: {
-        nutritionLabel:
+        tabela:
           manifest.train[
             "nutrition-label"
           ].length,
@@ -216,7 +157,7 @@ console.log(
       },
 
       valid: {
-        nutritionLabel:
+        tabela:
           manifest.valid[
             "nutrition-label"
           ].length,
@@ -226,7 +167,7 @@ console.log(
       },
 
       test: {
-        nutritionLabel:
+        tabela:
           manifest.test[
             "nutrition-label"
           ].length,

@@ -16,27 +16,52 @@ import {
 } from "./services/nutriscan";
 
 import {
-  compararLimiares,
+  avaliarModelo,
   type ResultadoAvaliacao
 } from "./services/evaluation";
+
+import {
+  extrairTextoImagem,
+  type ResultadoOCR
+} from "./services/ocr";
+
+import {
+  interpretarTabelaNutricional,
+  type DadosNutricionais
+} from "./services/nutritionParser";
+
+import {
+  LIMIAR_TABELA
+} from "./config/modelConfig";
 
 
 function App() {
 
-  // ==========================================
+  // =====================================
   // IMAGEM
-  // ==========================================
+  // =====================================
 
-  const [imagem, setImagem] =
-    useState<string | null>(null);
+  const [
+    imagem,
+    setImagem
+  ] =
+    useState<string | null>(
+      null
+    );
 
-  const [arquivo, setArquivo] =
-    useState<File | null>(null);
+
+  const [
+    arquivo,
+    setArquivo
+  ] =
+    useState<File | null>(
+      null
+    );
 
 
-  // ==========================================
-  // RESULTADO INDIVIDUAL
-  // ==========================================
+  // =====================================
+  // CLASSIFICAÇÃO
+  // =====================================
 
   const [
     resultadoNutriScan,
@@ -47,16 +72,23 @@ function App() {
     );
 
 
-  const [carregando, setCarregando] =
+  const [
+    carregando,
+    setCarregando
+  ] =
     useState(false);
 
 
-  // ==========================================
+  // =====================================
   // TREINAMENTO
-  // ==========================================
+  // =====================================
 
-  const [treinando, setTreinando] =
+  const [
+    treinando,
+    setTreinando
+  ] =
     useState(false);
+
 
   const [
     statusTreino,
@@ -65,12 +97,16 @@ function App() {
     useState("");
 
 
-  // ==========================================
-  // AVALIAÇÃO DE THRESHOLD
-  // ==========================================
+  // =====================================
+  // AVALIAÇÃO
+  // =====================================
 
-  const [avaliando, setAvaliando] =
+  const [
+    avaliando,
+    setAvaliando
+  ] =
     useState(false);
+
 
   const [
     progressoAvaliacao,
@@ -78,40 +114,90 @@ function App() {
   ] =
     useState("");
 
-  const [
-    resultadosThreshold,
-    setResultadosThreshold
-  ] =
-    useState<ResultadoAvaliacao[]>([]);
-
 
   const [
-    resultadoSelecionado,
-    setResultadoSelecionado
+    resultadoAvaliacao,
+    setResultadoAvaliacao
   ] =
     useState<ResultadoAvaliacao | null>(
       null
     );
 
 
-  // ==========================================
-  // ERROS
-  // ==========================================
+  // =====================================
+  // OCR
+  // =====================================
 
-  const [erro, setErro] =
+  const [
+    lendoTexto,
+    setLendoTexto
+  ] =
+    useState(false);
+
+
+  const [
+    progressoOCR,
+    setProgressoOCR
+  ] =
     useState("");
 
 
-  // ==========================================
-  // LIMPAR URL TEMPORÁRIA
-  // ==========================================
+  const [
+    percentualOCR,
+    setPercentualOCR
+  ] =
+    useState(0);
+
+
+  const [
+    resultadoOCR,
+    setResultadoOCR
+  ] =
+    useState<ResultadoOCR | null>(
+      null
+    );
+
+
+  // =====================================
+  // NUTRIENTES
+  // =====================================
+
+  const [
+    dadosNutricionais,
+    setDadosNutricionais
+  ] =
+    useState<DadosNutricionais | null>(
+      null
+    );
+
+
+  // =====================================
+  // ERRO
+  // =====================================
+
+  const [
+    erro,
+    setErro
+  ] =
+    useState("");
+
+
+  // =====================================
+  // LIMPAR URL
+  // =====================================
 
   useEffect(() => {
 
     return () => {
 
-      if (imagem) {
-        URL.revokeObjectURL(imagem);
+      if (
+        imagem
+      ) {
+
+        URL.revokeObjectURL(
+          imagem
+        );
+
       }
 
     };
@@ -119,116 +205,253 @@ function App() {
   }, [imagem]);
 
 
-  // ==========================================
+  // =====================================
   // SELECIONAR IMAGEM
-  // ==========================================
+  // =====================================
 
   function selecionarImagem(
-    event: ChangeEvent<HTMLInputElement>
+    event:
+      ChangeEvent<HTMLInputElement>
   ) {
 
     const file =
       event.target.files?.[0];
 
 
-    if (!file) {
+    if (
+      !file
+    ) {
       return;
     }
 
 
-    if (imagem) {
-      URL.revokeObjectURL(imagem);
+    if (
+      imagem
+    ) {
+
+      URL.revokeObjectURL(
+        imagem
+      );
+
     }
 
 
     const novaImagem =
-      URL.createObjectURL(file);
+      URL.createObjectURL(
+        file
+      );
 
 
-    setArquivo(file);
+    setArquivo(
+      file
+    );
 
-    setImagem(novaImagem);
 
-    setResultadoNutriScan(null);
+    setImagem(
+      novaImagem
+    );
 
-    setErro("");
+
+    setResultadoNutriScan(
+      null
+    );
+
+
+    setResultadoOCR(
+      null
+    );
+
+
+    setDadosNutricionais(
+      null
+    );
+
+
+    setErro(
+      ""
+    );
+
   }
 
 
-  // ==========================================
-  // TREINAR
-  // ==========================================
+  // =====================================
+  // TREINAR V1
+  // =====================================
 
   async function treinar() {
 
-    setTreinando(true);
+    setTreinando(
+      true
+    );
 
-    setErro("");
+
+    setErro(
+      ""
+    );
+
+
+    setResultadoAvaliacao(
+      null
+    );
+
 
     setStatusTreino(
-      "Iniciando treinamento..."
+      "Preparando NutriScan V1..."
     );
 
 
     try {
 
       await treinarClassificador(
-        (status) => {
-
-          setStatusTreino(status);
-
-        }
+        setStatusTreino
       );
 
 
       setStatusTreino(
-        "Modelo NutriScan AI treinado e salvo com sucesso!"
+        "NutriScan V1 treinado. Agora faça a avaliação."
       );
 
-
-      setResultadosThreshold([]);
-
-      setResultadoSelecionado(null);
-
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
-        "Erro durante treinamento:",
         error
       );
 
 
       setErro(
-        "Ocorreu um erro durante o treinamento."
+        "Erro ao treinar o NutriScan V1."
       );
-
-
-      setStatusTreino("");
 
     } finally {
 
-      setTreinando(false);
+      setTreinando(
+        false
+      );
 
     }
+
   }
 
 
-  // ==========================================
+  // =====================================
+  // AVALIAR V1
+  // =====================================
+
+  async function avaliarV1() {
+
+    setAvaliando(
+      true
+    );
+
+
+    setErro(
+      ""
+    );
+
+
+    setResultadoAvaliacao(
+      null
+    );
+
+
+    setProgressoAvaliacao(
+      "Preparando avaliação..."
+    );
+
+
+    try {
+
+      const resultado =
+        await avaliarModelo(
+
+          LIMIAR_TABELA,
+
+          (
+            atual,
+            total
+          ) => {
+
+            setProgressoAvaliacao(
+              `Avaliando ${atual}/${total}`
+            );
+
+          }
+
+        );
+
+
+      setResultadoAvaliacao(
+        resultado
+      );
+
+
+      setProgressoAvaliacao(
+        "Avaliação da V1 concluída!"
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        error
+      );
+
+
+      setErro(
+        "Erro ao avaliar o NutriScan V1."
+      );
+
+    } finally {
+
+      setAvaliando(
+        false
+      );
+
+    }
+
+  }
+
+
+  // =====================================
   // ANALISAR IMAGEM
-  // ==========================================
+  // =====================================
 
   async function analisar() {
 
-    if (!arquivo || !imagem) {
+    if (
+      !arquivo ||
+      !imagem
+    ) {
       return;
     }
 
 
-    setCarregando(true);
+    setCarregando(
+      true
+    );
 
-    setErro("");
 
-    setResultadoNutriScan(null);
+    setErro(
+      ""
+    );
+
+
+    setResultadoNutriScan(
+      null
+    );
+
+
+    setResultadoOCR(
+      null
+    );
+
+
+    setDadosNutricionais(
+      null
+    );
 
 
     try {
@@ -242,22 +465,23 @@ function App() {
 
 
       await new Promise<void>(
-        (resolve, reject) => {
+        (
+          resolve,
+          reject
+        ) => {
 
           img.onload =
-            () => resolve();
+            () =>
+              resolve();
 
 
           img.onerror =
-            () => {
-
+            () =>
               reject(
                 new Error(
-                  "Não foi possível carregar a imagem."
+                  "Erro ao carregar imagem."
                 )
               );
-
-            };
 
         }
       );
@@ -273,10 +497,11 @@ function App() {
         resultado
       );
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
-        "Erro na análise:",
         error
       );
 
@@ -287,102 +512,168 @@ function App() {
 
     } finally {
 
-      setCarregando(false);
+      setCarregando(
+        false
+      );
 
     }
+
   }
 
 
-  // ==========================================
-  // COMPARAR THRESHOLDS
-  // ==========================================
+  // =====================================
+  // OCR
+  // =====================================
 
-  async function executarComparacao() {
+  async function lerTabelaNutricional() {
 
-    setAvaliando(true);
+    if (
+      !imagem
+    ) {
+      return;
+    }
 
-    setErro("");
 
-    setResultadosThreshold([]);
+    setLendoTexto(
+      true
+    );
 
-    setResultadoSelecionado(null);
 
-    setProgressoAvaliacao(
-      "Preparando avaliação..."
+    setErro(
+      ""
+    );
+
+
+    setResultadoOCR(
+      null
+    );
+
+
+    setDadosNutricionais(
+      null
+    );
+
+
+    setProgressoOCR(
+      "Preparando OCR..."
+    );
+
+
+    setPercentualOCR(
+      0
     );
 
 
     try {
 
-      const resultados =
-        await compararLimiares(
-          [
-            0.50,
-            0.45,
-            0.40,
-            0.35
-          ],
+      const resultado =
+        await extrairTextoImagem(
 
-          (atual, total) => {
+          imagem,
 
-            setProgressoAvaliacao(
-              `Analisando ${atual}/${total}`
+          dados => {
+
+            setProgressoOCR(
+              dados.status
+            );
+
+
+            setPercentualOCR(
+              Math.round(
+                dados.progresso *
+                100
+              )
             );
 
           }
+
         );
 
 
-      setResultadosThreshold(
-        resultados
+      setResultadoOCR(
+        resultado
       );
 
 
-      // Inicialmente mostramos detalhes
-      // do threshold 0.50.
+      const nutrientes =
+        interpretarTabelaNutricional(
+          resultado.texto
+        );
 
-      setResultadoSelecionado(
-        resultados[0]
+
+      setDadosNutricionais(
+        nutrientes
       );
 
 
-      setProgressoAvaliacao(
-        "Comparação concluída!"
+      setProgressoOCR(
+        "Leitura concluída!"
       );
 
-    } catch (error) {
+
+      setPercentualOCR(
+        100
+      );
+
+    } catch (
+      error
+    ) {
 
       console.error(
-        "Erro na comparação:",
         error
       );
 
 
       setErro(
-        "Não foi possível comparar os thresholds."
+        "Não foi possível ler a tabela."
       );
-
-
-      setProgressoAvaliacao("");
 
     } finally {
 
-      setAvaliando(false);
+      setLendoTexto(
+        false
+      );
 
     }
+
   }
 
 
-  // ==========================================
-  // INTERFACE
-  // ==========================================
+  // =====================================
+  // FORMATAR
+  // =====================================
+
+  function mostrarValor(
+    valor:
+      number |
+      null,
+
+    unidade:
+      string
+  ) {
+
+    if (
+      valor === null
+    ) {
+
+      return "Não identificado";
+
+    }
+
+
+    return `${valor} ${unidade}`;
+
+  }
+
+
+  // =====================================
+  // JSX
+  // =====================================
 
   return (
 
     <main className="app-container">
 
-
-      {/* CABEÇALHO */}
 
       <header>
 
@@ -391,38 +682,42 @@ function App() {
         </h1>
 
         <p>
-          Análise inteligente de rótulos
-          utilizando TensorFlow.js
+          TensorFlow.js + Transfer Learning + OCR
         </p>
 
       </header>
 
 
       {/* ================================= */}
-      {/* TREINAMENTO */}
+      {/* ÁREA DO DESENVOLVEDOR */}
       {/* ================================= */}
 
-      <section className="training-section">
+      <section>
 
         <h2>
-          Treinamento do modelo
+          NutriScan V1
         </h2>
 
+
         <p>
-          Treine o classificador para
-          identificar tabelas nutricionais.
+          Treinamento reproduzível do
+          classificador.
         </p>
 
 
         <button
-          onClick={treinar}
-          disabled={treinando}
+          onClick={
+            treinar
+          }
+          disabled={
+            treinando
+          }
         >
 
           {
             treinando
-              ? "Treinando..."
-              : "Treinar NutriScan AI"
+              ? "Treinando V1..."
+              : "Treinar NutriScan V1"
           }
 
         </button>
@@ -432,8 +727,147 @@ function App() {
           statusTreino && (
 
             <p>
-              {statusTreino}
+              {
+                statusTreino
+              }
             </p>
+
+          )
+        }
+
+
+        <button
+          onClick={
+            avaliarV1
+          }
+          disabled={
+            avaliando ||
+            treinando
+          }
+          style={{
+            marginLeft:
+              "10px"
+          }}
+        >
+
+          {
+            avaliando
+              ? "Avaliando..."
+              : "Avaliar NutriScan V1"
+          }
+
+        </button>
+
+
+        {
+          progressoAvaliacao && (
+
+            <p>
+              {
+                progressoAvaliacao
+              }
+            </p>
+
+          )
+        }
+
+
+        {
+          resultadoAvaliacao && (
+
+            <div
+              style={{
+                margin:
+                  "25px auto",
+
+                maxWidth:
+                  "600px"
+              }}
+            >
+
+              <h3>
+                Resultado da V1
+              </h3>
+
+
+              <p>
+                Acurácia:{" "}
+                <strong>
+                  {
+                    (
+                      resultadoAvaliacao
+                        .acuracia *
+                      100
+                    ).toFixed(2)
+                  }
+                  %
+                </strong>
+              </p>
+
+
+              <p>
+                Precisão:{" "}
+                <strong>
+                  {
+                    (
+                      resultadoAvaliacao
+                        .precisao *
+                      100
+                    ).toFixed(2)
+                  }
+                  %
+                </strong>
+              </p>
+
+
+              <p>
+                Recall:{" "}
+                <strong>
+                  {
+                    (
+                      resultadoAvaliacao
+                        .recall *
+                      100
+                    ).toFixed(2)
+                  }
+                  %
+                </strong>
+              </p>
+
+
+              <p>
+                F1-score:{" "}
+                <strong>
+                  {
+                    (
+                      resultadoAvaliacao
+                        .f1Score *
+                      100
+                    ).toFixed(2)
+                  }
+                  %
+                </strong>
+              </p>
+
+
+              <p>
+                Falso positivo:{" "}
+                {
+                  resultadoAvaliacao
+                    .falsoPositivo
+                }
+              </p>
+
+
+              <p>
+                Falso negativo:{" "}
+                {
+                  resultadoAvaliacao
+                    .falsoNegativo
+                }
+              </p>
+
+            </div>
 
           )
         }
@@ -445,25 +879,22 @@ function App() {
 
 
       {/* ================================= */}
-      {/* ANÁLISE INDIVIDUAL */}
+      {/* SCANNER */}
       {/* ================================= */}
 
-      <section className="scanner-section">
+      <section>
 
         <h2>
-          Analisar imagem
+          Escâner de rótulo
         </h2>
-
-        <p>
-          Selecione uma imagem para verificar
-          se ela contém uma tabela nutricional.
-        </p>
 
 
         <input
           type="file"
           accept="image/*"
-          onChange={selecionarImagem}
+          onChange={
+            selecionarImagem
+          }
         />
 
 
@@ -475,13 +906,22 @@ function App() {
               <div>
 
                 <img
-                  src={imagem}
-                  alt="Imagem selecionada"
+                  src={
+                    imagem
+                  }
+                  alt="Rótulo"
                   style={{
-                    width: "100%",
-                    maxWidth: "450px",
-                    marginTop: "20px",
-                    borderRadius: "10px"
+                    width:
+                      "100%",
+
+                    maxWidth:
+                      "450px",
+
+                    marginTop:
+                      "20px",
+
+                    borderRadius:
+                      "10px"
                   }}
                 />
 
@@ -489,10 +929,15 @@ function App() {
 
 
               <button
-                onClick={analisar}
-                disabled={carregando}
+                onClick={
+                  analisar
+                }
+                disabled={
+                  carregando
+                }
                 style={{
-                  marginTop: "16px"
+                  marginTop:
+                    "20px"
                 }}
               >
 
@@ -512,48 +957,40 @@ function App() {
       </section>
 
 
-      {/* ================================= */}
-      {/* RESULTADO INDIVIDUAL */}
-      {/* ================================= */}
-
       {
         resultadoNutriScan && (
 
           <section
             style={{
-              marginTop: "30px"
+              marginTop:
+                "30px"
             }}
           >
 
             <h2>
-              Resultado do NutriScan AI
+              Resultado
             </h2>
 
 
-            <h3
-              style={{
-                fontSize: "28px"
-              }}
-            >
-
+            <h3>
               {
-                resultadoNutriScan.classe
+                resultadoNutriScan
+                  .classe
               }
-
             </h3>
 
 
             <p>
 
-              Confiança:{" "}
+              Score:{" "}
 
               <strong>
 
                 {
                   (
                     resultadoNutriScan
-                      .confianca
-                    * 100
+                      .probabilidadeTabela *
+                    100
                   ).toFixed(2)
                 }
 
@@ -565,22 +1002,68 @@ function App() {
 
 
             <p>
+              Threshold utilizado:{" "}
+              {
+                resultadoNutriScan
+                  .limiarUtilizado
+                  .toFixed(2)
+              }
+            </p>
 
-              Score de tabela nutricional:{" "}
 
-              <strong>
+            {
+              resultadoNutriScan
+                .classe ===
+                "Tabela nutricional" && (
 
-                {
-                  (
-                    resultadoNutriScan
-                      .probabilidadeTabela
-                    * 100
-                  ).toFixed(2)
-                }
+                <button
+                  onClick={
+                    lerTabelaNutricional
+                  }
+                  disabled={
+                    lendoTexto
+                  }
+                >
 
-                %
+                  {
+                    lendoTexto
+                      ? "Lendo..."
+                      : "Ler tabela nutricional"
+                  }
 
-              </strong>
+                </button>
+
+              )
+            }
+
+          </section>
+
+        )
+      }
+
+
+      {
+        progressoOCR && (
+
+          <section>
+
+            <h3>
+              OCR
+            </h3>
+
+            <p>
+
+              {
+                progressoOCR
+              }
+
+              {" "}
+
+              {
+                percentualOCR
+              }
+
+              %
 
             </p>
 
@@ -590,549 +1073,244 @@ function App() {
       }
 
 
-      <hr
-        style={{
-          marginTop: "40px"
-        }}
-      />
-
-
       {/* ================================= */}
-      {/* THRESHOLD */}
-      {/* ================================= */}
-
-      <section
-        style={{
-          marginTop: "30px",
-          marginBottom: "50px"
-        }}
-      >
-
-        <h2>
-          Experimento de Threshold
-        </h2>
-
-        <p>
-          Compare diferentes limites de decisão
-          usando o mesmo conjunto de teste.
-        </p>
-
-
-        <button
-          onClick={executarComparacao}
-          disabled={avaliando}
-        >
-
-          {
-            avaliando
-              ? "Avaliando..."
-              : "Comparar thresholds"
-          }
-
-        </button>
-
-
-        {
-          progressoAvaliacao && (
-
-            <p>
-              {progressoAvaliacao}
-            </p>
-
-          )
-        }
-
-
-        {/* ================================= */}
-        {/* TABELA COMPARATIVA */}
-        {/* ================================= */}
-
-        {
-          resultadosThreshold.length > 0 && (
-
-            <>
-
-              <h2
-                style={{
-                  marginTop: "35px"
-                }}
-              >
-                Comparação dos resultados
-              </h2>
-
-
-              <div
-                style={{
-                  overflowX: "auto"
-                }}
-              >
-
-                <table
-                  style={{
-                    width: "100%",
-                    maxWidth: "900px",
-                    margin: "20px auto",
-                    borderCollapse: "collapse"
-                  }}
-                >
-
-                  <thead>
-
-                    <tr>
-
-                      <th>
-                        Threshold
-                      </th>
-
-                      <th>
-                        Acurácia
-                      </th>
-
-                      <th>
-                        Precisão
-                      </th>
-
-                      <th>
-                        Recall
-                      </th>
-
-                      <th>
-                        F1
-                      </th>
-
-                      <th>
-                        FP
-                      </th>
-
-                      <th>
-                        FN
-                      </th>
-
-                      <th>
-                        Detalhes
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-
-                  <tbody>
-
-                    {
-                      resultadosThreshold.map(
-                        (resultado) => (
-
-                          <tr
-                            key={
-                              resultado.limiar
-                            }
-                          >
-
-                            <td>
-                              {
-                                resultado.limiar
-                                  .toFixed(2)
-                              }
-                            </td>
-
-
-                            <td>
-
-                              {
-                                (
-                                  resultado.acuracia *
-                                  100
-                                ).toFixed(2)
-                              }
-
-                              %
-
-                            </td>
-
-
-                            <td>
-
-                              {
-                                (
-                                  resultado.precisao *
-                                  100
-                                ).toFixed(2)
-                              }
-
-                              %
-
-                            </td>
-
-
-                            <td>
-
-                              {
-                                (
-                                  resultado.recall *
-                                  100
-                                ).toFixed(2)
-                              }
-
-                              %
-
-                            </td>
-
-
-                            <td>
-
-                              {
-                                (
-                                  resultado.f1Score *
-                                  100
-                                ).toFixed(2)
-                              }
-
-                              %
-
-                            </td>
-
-
-                            <td>
-
-                              {
-                                resultado
-                                  .falsoPositivo
-                              }
-
-                            </td>
-
-
-                            <td>
-
-                              {
-                                resultado
-                                  .falsoNegativo
-                              }
-
-                            </td>
-
-
-                            <td>
-
-                              <button
-                                onClick={() =>
-                                  setResultadoSelecionado(
-                                    resultado
-                                  )
-                                }
-                              >
-                                Ver erros
-                              </button>
-
-                            </td>
-
-                          </tr>
-
-                        )
-                      )
-                    }
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-            </>
-
-          )
-        }
-
-
-        {/* ================================= */}
-        {/* DETALHES DO THRESHOLD */}
-        {/* ================================= */}
-
-        {
-          resultadoSelecionado && (
-
-            <section
-              style={{
-                marginTop: "40px"
-              }}
-            >
-
-              <h2>
-
-                Threshold{" "}
-
-                {
-                  resultadoSelecionado
-                    .limiar
-                    .toFixed(2)
-                }
-
-              </h2>
-
-
-              <p>
-
-                Acertos:{" "}
-
-                <strong>
-                  {
-                    resultadoSelecionado
-                      .acertos
-                  }
-                </strong>
-
-                {" / "}
-
-                {
-                  resultadoSelecionado
-                    .total
-                }
-
-              </p>
-
-
-              <p>
-
-                Erros:{" "}
-
-                <strong>
-                  {
-                    resultadoSelecionado
-                      .erros
-                  }
-                </strong>
-
-              </p>
-
-
-              <p>
-
-                Falso positivo:{" "}
-
-                <strong>
-                  {
-                    resultadoSelecionado
-                      .falsoPositivo
-                  }
-                </strong>
-
-              </p>
-
-
-              <p>
-
-                Falso negativo:{" "}
-
-                <strong>
-                  {
-                    resultadoSelecionado
-                      .falsoNegativo
-                  }
-                </strong>
-
-              </p>
-
-
-              {/* ================================= */}
-              {/* IMAGENS ERRADAS */}
-              {/* ================================= */}
-
-              {
-                resultadoSelecionado
-                  .errosDetalhados
-                  .length > 0 && (
-
-                  <>
-
-                    <h2
-                      style={{
-                        marginTop: "40px"
-                      }}
-                    >
-                      Erros com este threshold
-                    </h2>
-
-
-                    <div
-                      style={{
-                        display: "grid",
-
-                        gridTemplateColumns:
-                          "repeat(auto-fit, minmax(250px, 1fr))",
-
-                        gap: "20px",
-
-                        marginTop: "25px"
-                      }}
-                    >
-
-                      {
-                        resultadoSelecionado
-                          .errosDetalhados
-                          .map(
-                            (
-                              erroModelo,
-                              index
-                            ) => (
-
-                              <article
-                                key={
-                                  `${erroModelo.url}-${index}`
-                                }
-                                style={{
-                                  border:
-                                    "1px solid #444",
-
-                                  borderRadius:
-                                    "12px",
-
-                                  padding:
-                                    "15px",
-
-                                  background:
-                                    "#1d1d22",
-
-                                  textAlign:
-                                    "left"
-                                }}
-                              >
-
-                                <img
-                                  src={
-                                    erroModelo.url
-                                  }
-                                  alt={
-                                    `Erro ${index + 1}`
-                                  }
-                                  style={{
-                                    width:
-                                      "100%",
-
-                                    height:
-                                      "220px",
-
-                                    objectFit:
-                                      "contain",
-
-                                    background:
-                                      "#111",
-
-                                    borderRadius:
-                                      "8px"
-                                  }}
-                                />
-
-
-                                <h3>
-
-                                  {
-                                    erroModelo.tipo
-                                  }
-
-                                </h3>
-
-
-                                <p>
-
-                                  Esperado:{" "}
-
-                                  <strong>
-
-                                    {
-                                      erroModelo
-                                        .esperado
-                                    }
-
-                                  </strong>
-
-                                </p>
-
-
-                                <p>
-
-                                  Modelo:{" "}
-
-                                  <strong>
-
-                                    {
-                                      erroModelo
-                                        .previsto
-                                    }
-
-                                  </strong>
-
-                                </p>
-
-
-                                <p>
-
-                                  Score tabela:{" "}
-
-                                  <strong>
-
-                                    {
-                                      (
-                                        erroModelo
-                                          .probabilidadeTabela
-                                        * 100
-                                      ).toFixed(2)
-                                    }
-
-                                    %
-
-                                  </strong>
-
-                                </p>
-
-                              </article>
-
-                            )
-                          )
-                      }
-
-                    </div>
-
-                  </>
-
-                )
-              }
-
-            </section>
-
-          )
-        }
-
-      </section>
-
-
-      {/* ================================= */}
-      {/* ERRO GLOBAL */}
+      {/* NUTRIENTES */}
       {/* ================================= */}
 
       {
-        erro && (
+        dadosNutricionais && (
 
-          <div
+          <section
             style={{
-              padding: "15px",
-              margin: "20px",
-              border:
-                "1px solid #ff6b6b",
-              borderRadius: "8px"
+              maxWidth:
+                "600px",
+
+              margin:
+                "40px auto",
+
+              textAlign:
+                "left"
             }}
           >
 
-            {erro}
+            <h2
+              style={{
+                textAlign:
+                  "center"
+              }}
+            >
+              Informações nutricionais
+            </h2>
 
-          </div>
+
+            <p>
+              🔥 Energia:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .energiaKcal,
+
+                    "kcal"
+                  )
+                }
+              </strong>
+            </p>
+
+
+            <p>
+              ⚡ Energia:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .energiaKj,
+
+                    "kJ"
+                  )
+                }
+              </strong>
+            </p>
+
+
+            <p>
+              🥑 Gorduras:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .gordura,
+
+                    "g"
+                  )
+                }
+              </strong>
+            </p>
+
+
+            <p>
+              Gorduras saturadas:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .gorduraSaturada,
+
+                    "g"
+                  )
+                }
+              </strong>
+            </p>
+
+
+            <p>
+              🍞 Carboidratos:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .carboidratos,
+
+                    "g"
+                  )
+                }
+              </strong>
+            </p>
+
+
+            <p>
+              🍬 Açúcares:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .acucares,
+
+                    "g"
+                  )
+                }
+              </strong>
+            </p>
+
+
+            <p>
+              🌾 Fibra:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .fibra,
+
+                    "g"
+                  )
+                }
+              </strong>
+            </p>
+
+
+            <p>
+              💪 Proteína:{" "}
+              <strong>
+                {
+                  mostrarValor(
+                    dadosNutricionais
+                      .proteina,
+
+                    "g"
+                  )
+                }
+              </strong>
+            </p>
+
+          </section>
 
         )
       }
 
+
+      {
+        resultadoOCR && (
+
+          <section>
+
+            <h2>
+              Texto bruto OCR
+            </h2>
+
+
+            <p>
+              Confiança média:{" "}
+              {
+                resultadoOCR
+                  .confianca
+                  .toFixed(2)
+              }
+              %
+            </p>
+
+
+            <pre
+              style={{
+                maxWidth:
+                  "700px",
+
+                margin:
+                  "20px auto",
+
+                padding:
+                  "20px",
+
+                border:
+                  "1px solid #444",
+
+                borderRadius:
+                  "10px",
+
+                whiteSpace:
+                  "pre-wrap",
+
+                textAlign:
+                  "left"
+              }}
+            >
+
+              {
+                resultadoOCR
+                  .texto
+              }
+
+            </pre>
+
+          </section>
+
+        )
+      }
+
+
+      {
+        erro && (
+
+          <p
+            style={{
+              color:
+                "#ff6b6b"
+            }}
+          >
+
+            {
+              erro
+            }
+
+          </p>
+
+        )
+      }
+
+
     </main>
 
   );
+
 }
 
 

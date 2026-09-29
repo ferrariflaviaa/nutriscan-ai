@@ -1,16 +1,42 @@
 import * as tf from "@tensorflow/tfjs";
 import * as mobilenet from "@tensorflow-models/mobilenet";
 
-let mobileNetModel: mobilenet.MobileNet | null = null;
+import {
+  LIMIAR_TABELA,
+  MODEL_STORAGE_KEY
+} from "../config/modelConfig";
 
-let classifier: tf.LayersModel | null = null;
+
+let mobileNetModel:
+  mobilenet.MobileNet |
+  null = null;
+
+
+let classifier:
+  tf.LayersModel |
+  null = null;
 
 
 // ==========================================
-// THRESHOLD ESCOLHIDO APÓS AVALIAÇÃO
+// RESULTADO
 // ==========================================
 
-export const LIMIAR_TABELA = 0.40;
+export type ResultadoNutriScan = {
+
+  classe:
+    | "Tabela nutricional"
+    | "Não é tabela nutricional";
+
+  confianca:
+    number;
+
+  probabilidadeTabela:
+    number;
+
+  limiarUtilizado:
+    number;
+
+};
 
 
 // ==========================================
@@ -22,7 +48,9 @@ async function carregarModelos() {
   await tf.ready();
 
 
-  if (!mobileNetModel) {
+  if (
+    !mobileNetModel
+  ) {
 
     mobileNetModel =
       await mobilenet.load();
@@ -30,11 +58,13 @@ async function carregarModelos() {
   }
 
 
-  if (!classifier) {
+  if (
+    !classifier
+  ) {
 
     classifier =
       await tf.loadLayersModel(
-        "indexeddb://nutriscan-classifier"
+        MODEL_STORAGE_KEY
       );
 
   }
@@ -44,29 +74,12 @@ async function carregarModelos() {
     mobileNetModel,
     classifier
   };
+
 }
 
 
 // ==========================================
-// TIPO DO RESULTADO
-// ==========================================
-
-export type ResultadoNutriScan = {
-
-  classe:
-    | "Tabela nutricional"
-    | "Não é tabela nutricional";
-
-  confianca: number;
-
-  probabilidadeTabela: number;
-
-  limiarUtilizado: number;
-};
-
-
-// ==========================================
-// ANALISAR IMAGEM
+// ANALISAR
 // ==========================================
 
 export async function analisarComNutriScan(
@@ -80,23 +93,12 @@ export async function analisarComNutriScan(
     await carregarModelos();
 
 
-  // ========================================
-  // MOBILE NET
-  //
-  // Converte a imagem em características
-  // visuais.
-  // ========================================
-
   const embedding =
     mobileNetModel.infer(
       image,
       true
     ) as tf.Tensor;
 
-
-  // ========================================
-  // NOSSO CLASSIFICADOR
-  // ========================================
 
   const prediction =
     classifier.predict(
@@ -112,18 +114,9 @@ export async function analisarComNutriScan(
     valores[0];
 
 
-  // ========================================
-  // DECISÃO
-  //
-  // Antes:
-  // score >= 0.50
-  //
-  // Agora:
-  // score >= 0.40
-  // ========================================
-
   const ehTabela =
-    scoreTabela >= LIMIAR_TABELA;
+    scoreTabela >=
+    LIMIAR_TABELA;
 
 
   const confianca =
@@ -132,18 +125,10 @@ export async function analisarComNutriScan(
       : 1 - scoreTabela;
 
 
-  // ========================================
-  // LIBERAR MEMÓRIA
-  // ========================================
-
   embedding.dispose();
 
   prediction.dispose();
 
-
-  // ========================================
-  // RESULTADO
-  // ========================================
 
   return {
 
@@ -159,23 +144,26 @@ export async function analisarComNutriScan(
 
     limiarUtilizado:
       LIMIAR_TABELA
+
   };
+
 }
 
 
 // ==========================================
-// LIMPAR MODELO DA MEMÓRIA
-//
-// Isso será útil quando treinarmos novamente.
+// LIMPAR CACHE DO MODELO
 // ==========================================
 
 export function limparModeloNutriScan() {
 
-  if (classifier) {
+  if (
+    classifier
+  ) {
 
     classifier.dispose();
 
-    classifier = null;
+    classifier =
+      null;
 
   }
 
