@@ -12,10 +12,6 @@ Todo o fluxo principal de análise acontece diretamente no navegador.
 
 Aplicação publicada:
 
-> Adicione aqui o endereço do seu projeto no Netlify.
-
-Exemplo:
-
 ```text
 https://nutriscan-ai.netlify.app
 ```
