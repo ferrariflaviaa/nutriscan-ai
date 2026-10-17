@@ -12,8 +12,29 @@ Todo o fluxo principal de análise acontece diretamente no navegador.
 
 Aplicação publicada:
 
-(https://nutrisacania.netlify.app/)
+> Adicione aqui o endereço do seu projeto no Netlify.
 
+Exemplo:
+
+```text
+https://nutriscan-ai.netlify.app
+```
+
+---
+
+## Interface
+
+### Tela inicial
+
+A interface permite selecionar uma imagem salva no dispositivo ou capturar uma nova foto da tabela nutricional.
+
+![Tela inicial do NutriScan AI](docs/screenshots/home.png)
+
+### Resultado da análise
+
+Após o processamento, o NutriScan apresenta os nutrientes identificados, destaque de proteína, pontos de atenção e informações complementares.
+
+![Resultado da análise do NutriScan AI](docs/screenshots/resultado.png)
 
 ---
 
@@ -649,6 +670,11 @@ O comportamento exato pode variar de acordo com o navegador e o sistema operacio
 
 ```text
 nutriscan-ai/
+│
+├── docs/
+│   └── screenshots/
+│       ├── home.png
+│       └── resultado.png
 │
 ├── public/
 │   └── models/
