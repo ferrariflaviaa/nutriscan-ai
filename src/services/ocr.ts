@@ -1,4 +1,5 @@
 import { createWorker, PSM } from "tesseract.js";
+import { textoContemTabelaNutricional } from "./nutritionDetection";
 
 // ==========================================
 // TIPOS
@@ -7,6 +8,7 @@ import { createWorker, PSM } from "tesseract.js";
 export type ResultadoOCR = {
   texto: string;
   confianca: number;
+  rotacao?: number;
 
   modo?:
     | "original"
@@ -1334,6 +1336,19 @@ function criarCandidato(
 // EXTRAIR TEXTO
 // ==========================================
 
+async function girarImagem(imagem: HTMLImageElement, graus: number) {
+  const canvas = document.createElement("canvas");
+  const lateral = graus === 90 || graus === 270;
+  canvas.width = lateral ? imagem.naturalHeight : imagem.naturalWidth;
+  canvas.height = lateral ? imagem.naturalWidth : imagem.naturalHeight;
+  const contexto = canvas.getContext("2d");
+  if (!contexto) throw new Error("Não foi possível ajustar a orientação da imagem.");
+  contexto.translate(canvas.width / 2, canvas.height / 2);
+  contexto.rotate(graus * Math.PI / 180);
+  contexto.drawImage(imagem, -imagem.naturalWidth / 2, -imagem.naturalHeight / 2);
+  return carregarImagem(canvas.toDataURL("image/png"));
+}
+
 export async function extrairTextoImagem(
   imagem:
     | string
@@ -1368,10 +1383,32 @@ export async function extrairTextoImagem(
       0.14,
     );
 
-    const original =
+    let original =
       await executarOCR(
         imagem,
       );
+
+    let rotacao = 0;
+    // Fotos do celular podem chegar de lado ou de cabeça para baixo.
+    // Corrige antes de aplicar contraste e os recortes da tabela.
+    if (!textoContemTabelaNutricional(original.data.text)) {
+      const base = await carregarImagem(imagem);
+      let melhorPontuacao = calcularPontuacaoOCR(original.data.text, original.data.confidence);
+      for (const graus of [90, 270, 180]) {
+        callbackProgresso?.({ progresso: 0.14, status: "Ajustando orientação da tabela" });
+        definirFaixaProgresso(0.14, 0.14);
+        const girada = await girarImagem(base, graus);
+        const leitura = await executarOCR(girada);
+        const pontuacao = calcularPontuacaoOCR(leitura.data.text, leitura.data.confidence);
+        if (textoContemTabelaNutricional(leitura.data.text) || pontuacao > melhorPontuacao) {
+          melhorPontuacao = pontuacao;
+          original = leitura;
+          imagem = girada;
+          rotacao = graus;
+        }
+        if (textoContemTabelaNutricional(original.data.text)) break;
+      }
+    }
 
     candidatos.push(
       criarCandidato(
@@ -1549,6 +1586,10 @@ export async function extrairTextoImagem(
 
     candidatos.sort(
       (a, b) => {
+        const diferencaTabela = Number(textoContemTabelaNutricional(b.texto)) -
+          Number(textoContemTabelaNutricional(a.texto));
+        if (diferencaTabela !== 0) return diferencaTabela;
+
         if (
           b.pontuacao !==
           a.pontuacao
@@ -1625,6 +1666,7 @@ export async function extrairTextoImagem(
 
       modo:
         melhor.modo,
+      rotacao,
     };
   } finally {
     /*

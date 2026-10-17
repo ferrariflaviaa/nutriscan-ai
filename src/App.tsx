@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import "./App.css";
+import { textoContemTabelaNutricional } from "./services/nutritionDetection";
 
 import {
   analisarComNutriScan,
@@ -685,20 +686,8 @@ function App() {
       // NÃO É TABELA
       // ====================================
 
-      if (
-        classificacao.classe !==
-        "Tabela nutricional"
-      ) {
-        setEtapa(
-          "Não foi possível identificar uma tabela nutricional.",
-        );
-
-        setPercentual(
-          100,
-        );
-
-        return;
-      }
+      // Uma foto de embalagem pode ser rejeitada pelo classificador visual.
+      // O OCR também verifica a presença de uma tabela antes de encerrar.
 
 
       // ====================================
@@ -741,6 +730,13 @@ function App() {
       setResultadoOCR(
         resultadoTexto,
       );
+
+      if (classificacao.classe !== "Tabela nutricional" &&
+          !textoContemTabelaNutricional(resultadoTexto.texto)) {
+        setEtapa("Não foi possível identificar uma tabela nutricional.");
+        setPercentual(100);
+        return;
+      }
 
 
       // ====================================
@@ -1178,7 +1174,8 @@ function App() {
       {
         resultadoNutriScan &&
         resultadoNutriScan.classe !==
-          "Tabela nutricional" && (
+          "Tabela nutricional" &&
+        resultadoOCR && !processando && !erro && !dadosNutricionais && (
 
           <section className="result-card incomplete">
 
