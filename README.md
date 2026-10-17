@@ -12,7 +12,7 @@ Todo o fluxo principal de análise acontece diretamente no navegador.
 
 Aplicação publicada:
 
-(https://app.netlify.com/projects/nutrisacania)
+(https://nutrisacania.netlify.app/)
 
 
 ---
