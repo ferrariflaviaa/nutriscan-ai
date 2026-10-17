@@ -8,18 +8,9 @@ import {
 import "./App.css";
 
 import {
-  treinarClassificador,
-} from "./services/training";
-
-import {
   analisarComNutriScan,
   type ResultadoNutriScan,
 } from "./services/nutriscan";
-
-import {
-  avaliarModelo,
-  type ResultadoAvaliacao,
-} from "./services/evaluation";
 
 import {
   extrairTextoImagem,
@@ -36,10 +27,6 @@ import {
   type ResultadoAnaliseNutricional,
 } from "./services/nutritionAnalysis";
 
-import {
-  LIMIAR_TABELA,
-} from "./config/modelConfig";
-
 
 function App() {
   // ========================================
@@ -49,16 +36,18 @@ function App() {
   const [
     imagem,
     setImagem,
-  ] = useState<string | null>(
-    null,
-  );
+  ] =
+    useState<string | null>(
+      null,
+    );
 
   const [
     arquivo,
     setArquivo,
-  ] = useState<File | null>(
-    null,
-  );
+  ] =
+    useState<File | null>(
+      null,
+    );
 
 
   // ========================================
@@ -149,43 +138,6 @@ function App() {
 
 
   // ========================================
-  // DESENVOLVIMENTO
-  // ========================================
-
-  const [
-    treinando,
-    setTreinando,
-  ] =
-    useState(false);
-
-  const [
-    statusTreino,
-    setStatusTreino,
-  ] =
-    useState("");
-
-  const [
-    avaliando,
-    setAvaliando,
-  ] =
-    useState(false);
-
-  const [
-    progressoAvaliacao,
-    setProgressoAvaliacao,
-  ] =
-    useState("");
-
-  const [
-    resultadoAvaliacao,
-    setResultadoAvaliacao,
-  ] =
-    useState<ResultadoAvaliacao | null>(
-      null,
-    );
-
-
-  // ========================================
   // ERRO
   // ========================================
 
@@ -197,7 +149,7 @@ function App() {
 
 
   // ========================================
-  // CONECTAR STREAM AO VIDEO
+  // CONECTAR CÂMERA AO VÍDEO
   // ========================================
 
   useEffect(() => {
@@ -224,7 +176,7 @@ function App() {
 
 
   // ========================================
-  // LIMPAR OBJECT URL
+  // LIMPAR URL DA IMAGEM
   // ========================================
 
   useEffect(() => {
@@ -250,8 +202,9 @@ function App() {
         streamRef.current
           .getTracks()
           .forEach(
-            track =>
-              track.stop(),
+            track => {
+              track.stop();
+            },
           );
       }
     };
@@ -313,12 +266,14 @@ function App() {
         null;
     }
 
+
     if (
       videoRef.current
     ) {
       videoRef.current.srcObject =
         null;
     }
+
 
     setCameraAberta(
       false,
@@ -360,23 +315,19 @@ function App() {
           .getUserMedia({
             video: {
               facingMode: {
-                ideal:
-                  "environment",
+                ideal: "environment",
               },
 
               width: {
-                ideal:
-                  1280,
+                ideal: 1920,
               },
 
               height: {
-                ideal:
-                  720,
+                ideal: 1080,
               },
             },
 
-            audio:
-              false,
+            audio: false,
           });
 
 
@@ -405,6 +356,7 @@ function App() {
           setErro(
             "Permissão da câmera negada. Autorize o acesso à câmera no navegador.",
           );
+
         } else if (
           error.name ===
           "NotFoundError"
@@ -412,11 +364,13 @@ function App() {
           setErro(
             "Nenhuma câmera foi encontrada neste dispositivo.",
           );
+
         } else {
           setErro(
             "Não foi possível abrir a câmera.",
           );
         }
+
       } else {
         setErro(
           "Não foi possível abrir a câmera.",
@@ -498,7 +452,7 @@ function App() {
           canvas.toBlob(
             resolve,
             "image/jpeg",
-            0.92,
+            0.95,
           );
         },
       );
@@ -517,15 +471,12 @@ function App() {
 
     const novoArquivo =
       new File(
-        [
-          blob,
-        ],
+        [blob],
 
         `nutriscan-${Date.now()}.jpg`,
 
         {
-          type:
-            "image/jpeg",
+          type: "image/jpeg",
         },
       );
 
@@ -609,10 +560,6 @@ function App() {
     limparResultados();
 
 
-    /*
-      Permite escolher novamente
-      o mesmo arquivo.
-    */
     event.target.value =
       "";
   }
@@ -639,16 +586,19 @@ function App() {
         reject,
       ) => {
         img.onload =
-          () =>
+          () => {
             resolve();
+          };
+
 
         img.onerror =
-          () =>
+          () => {
             reject(
               new Error(
                 "Erro ao carregar a imagem.",
               ),
             );
+          };
       },
     );
 
@@ -794,7 +744,7 @@ function App() {
 
 
       // ====================================
-      // 3. PARSER
+      // 3. INTERPRETAÇÃO
       // ====================================
 
       setEtapa(
@@ -818,7 +768,7 @@ function App() {
 
 
       // ====================================
-      // 4. ANÁLISE
+      // 4. ANÁLISE NUTRICIONAL
       // ====================================
 
       setEtapa(
@@ -852,6 +802,7 @@ function App() {
 
     } catch (error) {
       console.error(
+        "Erro durante análise do NutriScan:",
         error,
       );
 
@@ -909,8 +860,7 @@ function App() {
       string,
   ) {
     if (
-      valor ===
-      null
+      valor === null
     ) {
       return "Não identificado";
     }
@@ -919,121 +869,6 @@ function App() {
     return `${formatarNumero(
       valor,
     )} ${unidade}`;
-  }
-
-
-  // ========================================
-  // TREINAR
-  // ========================================
-
-  async function treinar() {
-    setTreinando(
-      true,
-    );
-
-    setErro(
-      "",
-    );
-
-    setResultadoAvaliacao(
-      null,
-    );
-
-    setStatusTreino(
-      "Preparando NutriScan V1...",
-    );
-
-
-    try {
-      await treinarClassificador(
-        setStatusTreino,
-      );
-
-
-      setStatusTreino(
-        "NutriScan V1 treinado.",
-      );
-
-    } catch (error) {
-      console.error(
-        error,
-      );
-
-
-      setErro(
-        "Erro ao treinar o modelo.",
-      );
-
-    } finally {
-      setTreinando(
-        false,
-      );
-    }
-  }
-
-
-  // ========================================
-  // AVALIAR
-  // ========================================
-
-  async function avaliarV1() {
-    setAvaliando(
-      true,
-    );
-
-    setErro(
-      "",
-    );
-
-    setResultadoAvaliacao(
-      null,
-    );
-
-    setProgressoAvaliacao(
-      "Preparando avaliação...",
-    );
-
-
-    try {
-      const resultado =
-        await avaliarModelo(
-          LIMIAR_TABELA,
-
-          (
-            atual,
-            total,
-          ) => {
-            setProgressoAvaliacao(
-              `Avaliando ${atual}/${total}`,
-            );
-          },
-        );
-
-
-      setResultadoAvaliacao(
-        resultado,
-      );
-
-
-      setProgressoAvaliacao(
-        "Avaliação concluída.",
-      );
-
-    } catch (error) {
-      console.error(
-        error,
-      );
-
-
-      setErro(
-        "Erro ao avaliar o modelo.",
-      );
-
-    } finally {
-      setAvaliando(
-        false,
-      );
-    }
   }
 
 
@@ -1084,9 +919,9 @@ function App() {
               Analisar rótulo
             </h2>
 
+
             <p>
-              Escolha uma imagem ou fotografe
-              sua tabela nutricional.
+              Escolha uma imagem ou fotografe sua tabela nutricional.
             </p>
 
           </div>
@@ -1094,13 +929,9 @@ function App() {
         </div>
 
 
-        {/* ================================= */}
-        {/* ESCOLHER / CÂMERA */}
-        {/* ================================= */}
-
         <div className="capture-options">
 
-          {/* ESCOLHER IMAGEM */}
+          {/* ESCOLHER FOTO */}
 
           <label className="capture-card">
 
@@ -1124,14 +955,13 @@ function App() {
 
 
             <span>
-              Selecione uma imagem salva
-              no dispositivo
+              Selecione uma imagem salva no dispositivo
             </span>
 
           </label>
 
 
-          {/* ABRIR CÂMERA */}
+          {/* TIRAR FOTO */}
 
           <button
             type="button"
@@ -1164,8 +994,7 @@ function App() {
 
 
             <span>
-              Use sua webcam ou câmera
-              do dispositivo
+              Use sua webcam ou câmera do dispositivo
             </span>
 
           </button>
@@ -1174,13 +1003,12 @@ function App() {
 
 
         <p className="capture-tip">
-          💡 Fotografe a tabela de frente,
-          com boa iluminação e sem reflexos.
+          💡 Fotografe a tabela de frente, com boa iluminação e sem reflexos.
         </p>
 
 
         {/* ================================= */}
-        {/* PREVIEW DA CÂMERA */}
+        {/* CÂMERA */}
         {/* ================================= */}
 
         {
@@ -1237,7 +1065,7 @@ function App() {
 
 
         {/* ================================= */}
-        {/* PREVIEW DA FOTO */}
+        {/* PREVIEW */}
         {/* ================================= */}
 
         {
@@ -1301,7 +1129,7 @@ function App() {
               <span>
                 {
                   percentual ===
-                    100
+                  100
                     ? "✓"
                     : "◌"
                 }
@@ -1400,7 +1228,7 @@ function App() {
 
                 {
                   analiseNutricional.status ===
-                    "favoravel"
+                  "favoravel"
                     ? "✅"
                     : analiseNutricional.status ===
                         "atencao"
@@ -1430,7 +1258,9 @@ function App() {
             </header>
 
 
+            {/* ================================= */}
             {/* PROTEÍNA */}
+            {/* ================================= */}
 
             <div className="protein-card">
 
@@ -1439,6 +1269,7 @@ function App() {
                 <span>
                   💪
                 </span>
+
 
                 <h3>
                   Proteína
@@ -1450,8 +1281,7 @@ function App() {
               {
                 analiseNutricional
                   .proteina
-                  .valor !==
-                  null
+                  .valor !== null
                   ? (
 
                     <>
@@ -1510,13 +1340,14 @@ function App() {
             </div>
 
 
+            {/* ================================= */}
             {/* ALERTAS */}
+            {/* ================================= */}
 
             {
               analiseNutricional
                 .alertas
-                .length >
-                0 && (
+                .length > 0 && (
 
                 <div className="result-section">
 
@@ -1596,13 +1427,14 @@ function App() {
             }
 
 
-            {/* POSITIVOS */}
+            {/* ================================= */}
+            {/* PONTOS POSITIVOS */}
+            {/* ================================= */}
 
             {
               analiseNutricional
                 .pontosPositivos
-                .length >
-                0 && (
+                .length > 0 && (
 
                 <div className="result-section">
 
@@ -1632,6 +1464,7 @@ function App() {
                                 ✓
                               </span>
 
+
                               {
                                 ponto
                               }
@@ -1650,13 +1483,14 @@ function App() {
             }
 
 
+            {/* ================================= */}
             {/* INFORMAÇÕES */}
+            {/* ================================= */}
 
             {
               analiseNutricional
                 .observacoes
-                .length >
-                0 && (
+                .length > 0 && (
 
                 <div className="result-section info-section">
 
@@ -1694,6 +1528,10 @@ function App() {
             }
 
 
+            {/* ================================= */}
+            {/* FOTO INSUFICIENTE */}
+            {/* ================================= */}
+
             {
               !analiseNutricional
                 .podeConcluir && (
@@ -1723,7 +1561,7 @@ function App() {
 
 
       {/* ================================= */}
-      {/* NUTRIENTES */}
+      {/* NUTRIENTES IDENTIFICADOS */}
       {/* ================================= */}
 
       {
@@ -1937,6 +1775,7 @@ function App() {
                   Classificador
                 </span>
 
+
                 <strong>
 
                   {
@@ -1962,6 +1801,7 @@ function App() {
                   Confiança OCR
                 </span>
 
+
                 <strong>
 
                   {
@@ -1982,6 +1822,7 @@ function App() {
                 <span>
                   Estratégia OCR
                 </span>
+
 
                 <strong>
                   {
@@ -2024,191 +1865,15 @@ function App() {
 
 
       {/* ================================= */}
-      {/* DESENVOLVIMENTO */}
+      {/* FOOTER */}
       {/* ================================= */}
-
-      <details className="developer-panel">
-
-        <summary>
-          Área de desenvolvimento
-        </summary>
-
-
-        <div className="developer-content">
-
-          <h3>
-            NutriScan V1
-          </h3>
-
-
-          <p>
-            Ferramentas de treinamento e avaliação
-            do classificador.
-          </p>
-
-
-          <div className="developer-actions">
-
-            <button
-              onClick={
-                treinar
-              }
-              disabled={
-                treinando
-              }
-            >
-
-              {
-                treinando
-                  ? "Treinando..."
-                  : "Treinar V1"
-              }
-
-            </button>
-
-
-            <button
-              onClick={
-                avaliarV1
-              }
-              disabled={
-                avaliando ||
-                treinando
-              }
-            >
-
-              {
-                avaliando
-                  ? "Avaliando..."
-                  : "Avaliar V1"
-              }
-
-            </button>
-
-          </div>
-
-
-          {
-            statusTreino && (
-              <p>
-                {
-                  statusTreino
-                }
-              </p>
-            )
-          }
-
-
-          {
-            progressoAvaliacao && (
-              <p>
-                {
-                  progressoAvaliacao
-                }
-              </p>
-            )
-          }
-
-
-          {
-            resultadoAvaliacao && (
-
-              <div className="metrics-grid">
-
-                <div>
-
-                  <span>
-                    Acurácia
-                  </span>
-
-                  <strong>
-                    {
-                      (
-                        resultadoAvaliacao
-                          .acuracia *
-                        100
-                      ).toFixed(2)
-                    }
-                    %
-                  </strong>
-
-                </div>
-
-
-                <div>
-
-                  <span>
-                    Precisão
-                  </span>
-
-                  <strong>
-                    {
-                      (
-                        resultadoAvaliacao
-                          .precisao *
-                        100
-                      ).toFixed(2)
-                    }
-                    %
-                  </strong>
-
-                </div>
-
-
-                <div>
-
-                  <span>
-                    Recall
-                  </span>
-
-                  <strong>
-                    {
-                      (
-                        resultadoAvaliacao
-                          .recall *
-                        100
-                      ).toFixed(2)
-                    }
-                    %
-                  </strong>
-
-                </div>
-
-
-                <div>
-
-                  <span>
-                    F1-score
-                  </span>
-
-                  <strong>
-                    {
-                      (
-                        resultadoAvaliacao
-                          .f1Score *
-                        100
-                      ).toFixed(2)
-                    }
-                    %
-                  </strong>
-
-                </div>
-
-              </div>
-
-            )
-          }
-
-        </div>
-
-      </details>
-
 
       <footer className="app-footer">
 
         <strong>
           NutriScan AI
         </strong>
+
 
         <span>
           TensorFlow.js • Transfer Learning • OCR

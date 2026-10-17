@@ -3,18 +3,26 @@ import * as mobilenet from "@tensorflow-models/mobilenet";
 
 import {
   LIMIAR_TABELA,
-  MODEL_STORAGE_KEY
 } from "../config/modelConfig";
 
 
-let mobileNetModel:
-  mobilenet.MobileNet |
-  null = null;
+// ==========================================
+// CAMINHO DO MODELO DE PRODUÇÃO
+// ==========================================
 
+const MODEL_URL =
+  `${import.meta.env.BASE_URL}models/nutriscan-v1.json`;
+
+
+// ==========================================
+// CACHE DOS MODELOS
+// ==========================================
+
+let mobileNetModel:
+  mobilenet.MobileNet | null = null;
 
 let classifier:
-  tf.LayersModel |
-  null = null;
+  tf.LayersModel | null = null;
 
 
 // ==========================================
@@ -22,20 +30,25 @@ let classifier:
 // ==========================================
 
 export type ResultadoNutriScan = {
-
   classe:
     | "Tabela nutricional"
     | "Não é tabela nutricional";
 
-  confianca:
-    number;
+  confianca: number;
 
-  probabilidadeTabela:
-    number;
+  probabilidadeTabela: number;
 
-  limiarUtilizado:
-    number;
+  limiarUtilizado: number;
+};
 
+
+// ==========================================
+// MODELOS CARREGADOS
+// ==========================================
+
+type ModelosCarregados = {
+  mobileNetModel: mobilenet.MobileNet;
+  classifier: tf.LayersModel;
 };
 
 
@@ -43,38 +56,73 @@ export type ResultadoNutriScan = {
 // CARREGAR MODELOS
 // ==========================================
 
-async function carregarModelos() {
+async function carregarModelos():
+  Promise<ModelosCarregados> {
 
   await tf.ready();
 
 
-  if (
-    !mobileNetModel
-  ) {
+  // ========================================
+  // MOBILENET
+  // ========================================
+
+  if (!mobileNetModel) {
+    console.log(
+      "Carregando MobileNet...",
+    );
+
 
     mobileNetModel =
       await mobilenet.load();
 
+
+    console.log(
+      "MobileNet carregada com sucesso.",
+    );
   }
 
 
-  if (
-    !classifier
-  ) {
+  // ========================================
+  // CLASSIFICADOR NUTRISCAN
+  // ========================================
 
-    classifier =
-      await tf.loadLayersModel(
-        MODEL_STORAGE_KEY
+  if (!classifier) {
+    console.log(
+      "Carregando classificador NutriScan V1...",
+    );
+
+    console.log(
+      "URL do modelo:",
+      MODEL_URL,
+    );
+
+
+    try {
+      classifier =
+        await tf.loadLayersModel(
+          MODEL_URL,
+        );
+
+    } catch (error) {
+      console.error(
+        "Erro ao carregar o modelo estático do NutriScan:",
+        error,
       );
 
+      throw error;
+    }
+
+
+    console.log(
+      "NutriScan V1 carregado com sucesso.",
+    );
   }
 
 
   return {
     mobileNetModel,
-    classifier
+    classifier,
   };
-
 }
 
 
@@ -83,88 +131,117 @@ async function carregarModelos() {
 // ==========================================
 
 export async function analisarComNutriScan(
-  image: HTMLImageElement
+  image: HTMLImageElement,
 ): Promise<ResultadoNutriScan> {
 
   const {
-    mobileNetModel,
-    classifier
+    mobileNetModel: mobileNet,
+    classifier: modeloClassificador,
   } =
     await carregarModelos();
 
 
-  const embedding =
-    mobileNetModel.infer(
-      image,
-      true
-    ) as tf.Tensor;
+  let embedding:
+    tf.Tensor | null = null;
+
+  let prediction:
+    tf.Tensor | null = null;
 
 
-  const prediction =
-    classifier.predict(
-      embedding
-    ) as tf.Tensor;
+  try {
+    // ======================================
+    // GERAR EMBEDDING
+    // ======================================
+
+    embedding =
+      mobileNet.infer(
+        image,
+        true,
+      ) as tf.Tensor;
 
 
-  const valores =
-    await prediction.data();
+    // ======================================
+    // CLASSIFICAR
+    // ======================================
+
+    prediction =
+      modeloClassificador.predict(
+        embedding,
+      ) as tf.Tensor;
 
 
-  const scoreTabela =
-    valores[0];
+    const valores =
+      await prediction.data();
 
 
-  const ehTabela =
-    scoreTabela >=
-    LIMIAR_TABELA;
+    const scoreTabela =
+      Number(
+        valores[0],
+      );
 
 
-  const confianca =
-    ehTabela
-      ? scoreTabela
-      : 1 - scoreTabela;
+    // ======================================
+    // SEGURANÇA
+    // ======================================
+
+    if (
+      !Number.isFinite(
+        scoreTabela,
+      )
+    ) {
+      throw new Error(
+        "O classificador retornou um valor inválido.",
+      );
+    }
 
 
-  embedding.dispose();
+    // ======================================
+    // RESULTADO
+    // ======================================
 
-  prediction.dispose();
+    const ehTabela =
+      scoreTabela >=
+      LIMIAR_TABELA;
 
 
-  return {
-
-    classe:
+    const confianca =
       ehTabela
-        ? "Tabela nutricional"
-        : "Não é tabela nutricional",
+        ? scoreTabela
+        : 1 - scoreTabela;
 
-    confianca,
 
-    probabilidadeTabela:
-      scoreTabela,
+    return {
+      classe:
+        ehTabela
+          ? "Tabela nutricional"
+          : "Não é tabela nutricional",
 
-    limiarUtilizado:
-      LIMIAR_TABELA
+      confianca,
 
-  };
+      probabilidadeTabela:
+        scoreTabela,
 
+      limiarUtilizado:
+        LIMIAR_TABELA,
+    };
+
+  } finally {
+    embedding?.dispose();
+
+    prediction?.dispose();
+  }
 }
 
 
 // ==========================================
-// LIMPAR CACHE DO MODELO
+// LIMPAR CACHE DO CLASSIFICADOR
 // ==========================================
 
 export function limparModeloNutriScan() {
-
-  if (
-    classifier
-  ) {
-
+  if (classifier) {
     classifier.dispose();
 
     classifier =
       null;
-
   }
-
 }
