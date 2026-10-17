@@ -16,3 +16,11 @@ public/training-data/
 
 # Logs
 *.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json

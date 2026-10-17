@@ -1,37 +1,42 @@
 import {
   useEffect,
   useState,
-  type ChangeEvent
+  type ChangeEvent,
 } from "react";
 
 import "./App.css";
 
 import {
-  treinarClassificador
+  treinarClassificador,
 } from "./services/training";
 
 import {
   analisarComNutriScan,
-  type ResultadoNutriScan
+  type ResultadoNutriScan,
 } from "./services/nutriscan";
 
 import {
   avaliarModelo,
-  type ResultadoAvaliacao
+  type ResultadoAvaliacao,
 } from "./services/evaluation";
 
 import {
   extrairTextoImagem,
-  type ResultadoOCR
+  type ResultadoOCR,
 } from "./services/ocr";
 
 import {
   interpretarTabelaNutricional,
-  type DadosNutricionais
+  type DadosNutricionais,
 } from "./services/nutritionParser";
 
 import {
-  LIMIAR_TABELA
+  analisarNutricionalmente,
+  type ResultadoAnaliseNutricional,
+} from "./services/nutritionAnalysis";
+
+import {
+  LIMIAR_TABELA,
 } from "./config/modelConfig";
 
 
@@ -43,19 +48,19 @@ function App() {
 
   const [
     imagem,
-    setImagem
+    setImagem,
   ] =
     useState<string | null>(
-      null
+      null,
     );
 
 
   const [
     arquivo,
-    setArquivo
+    setArquivo,
   ] =
     useState<File | null>(
-      null
+      null,
     );
 
 
@@ -65,16 +70,16 @@ function App() {
 
   const [
     resultadoNutriScan,
-    setResultadoNutriScan
+    setResultadoNutriScan,
   ] =
     useState<ResultadoNutriScan | null>(
-      null
+      null,
     );
 
 
   const [
     carregando,
-    setCarregando
+    setCarregando,
   ] =
     useState(false);
 
@@ -85,14 +90,14 @@ function App() {
 
   const [
     treinando,
-    setTreinando
+    setTreinando,
   ] =
     useState(false);
 
 
   const [
     statusTreino,
-    setStatusTreino
+    setStatusTreino,
   ] =
     useState("");
 
@@ -103,24 +108,24 @@ function App() {
 
   const [
     avaliando,
-    setAvaliando
+    setAvaliando,
   ] =
     useState(false);
 
 
   const [
     progressoAvaliacao,
-    setProgressoAvaliacao
+    setProgressoAvaliacao,
   ] =
     useState("");
 
 
   const [
     resultadoAvaliacao,
-    setResultadoAvaliacao
+    setResultadoAvaliacao,
   ] =
     useState<ResultadoAvaliacao | null>(
-      null
+      null,
     );
 
 
@@ -130,31 +135,31 @@ function App() {
 
   const [
     lendoTexto,
-    setLendoTexto
+    setLendoTexto,
   ] =
     useState(false);
 
 
   const [
     progressoOCR,
-    setProgressoOCR
+    setProgressoOCR,
   ] =
     useState("");
 
 
   const [
     percentualOCR,
-    setPercentualOCR
+    setPercentualOCR,
   ] =
     useState(0);
 
 
   const [
     resultadoOCR,
-    setResultadoOCR
+    setResultadoOCR,
   ] =
     useState<ResultadoOCR | null>(
-      null
+      null,
     );
 
 
@@ -164,10 +169,23 @@ function App() {
 
   const [
     dadosNutricionais,
-    setDadosNutricionais
+    setDadosNutricionais,
   ] =
     useState<DadosNutricionais | null>(
-      null
+      null,
+    );
+
+
+  // =====================================
+  // ANÁLISE NUTRICIONAL
+  // =====================================
+
+  const [
+    analiseNutricional,
+    setAnaliseNutricional,
+  ] =
+    useState<ResultadoAnaliseNutricional | null>(
+      null,
     );
 
 
@@ -177,7 +195,7 @@ function App() {
 
   const [
     erro,
-    setErro
+    setErro,
   ] =
     useState("");
 
@@ -195,7 +213,7 @@ function App() {
       ) {
 
         URL.revokeObjectURL(
-          imagem
+          imagem,
         );
 
       }
@@ -211,7 +229,7 @@ function App() {
 
   function selecionarImagem(
     event:
-      ChangeEvent<HTMLInputElement>
+      ChangeEvent<HTMLInputElement>,
   ) {
 
     const file =
@@ -221,7 +239,9 @@ function App() {
     if (
       !file
     ) {
+
       return;
+
     }
 
 
@@ -230,7 +250,7 @@ function App() {
     ) {
 
       URL.revokeObjectURL(
-        imagem
+        imagem,
       );
 
     }
@@ -238,37 +258,52 @@ function App() {
 
     const novaImagem =
       URL.createObjectURL(
-        file
+        file,
       );
 
 
     setArquivo(
-      file
+      file,
     );
 
 
     setImagem(
-      novaImagem
+      novaImagem,
     );
 
 
     setResultadoNutriScan(
-      null
+      null,
     );
 
 
     setResultadoOCR(
-      null
+      null,
     );
 
 
     setDadosNutricionais(
-      null
+      null,
+    );
+
+
+    setAnaliseNutricional(
+      null,
+    );
+
+
+    setProgressoOCR(
+      "",
+    );
+
+
+    setPercentualOCR(
+      0,
     );
 
 
     setErro(
-      ""
+      "",
     );
 
   }
@@ -281,34 +316,34 @@ function App() {
   async function treinar() {
 
     setTreinando(
-      true
+      true,
     );
 
 
     setErro(
-      ""
+      "",
     );
 
 
     setResultadoAvaliacao(
-      null
+      null,
     );
 
 
     setStatusTreino(
-      "Preparando NutriScan V1..."
+      "Preparando NutriScan V1...",
     );
 
 
     try {
 
       await treinarClassificador(
-        setStatusTreino
+        setStatusTreino,
       );
 
 
       setStatusTreino(
-        "NutriScan V1 treinado. Agora faça a avaliação."
+        "NutriScan V1 treinado. Agora faça a avaliação.",
       );
 
     } catch (
@@ -316,18 +351,18 @@ function App() {
     ) {
 
       console.error(
-        error
+        error,
       );
 
 
       setErro(
-        "Erro ao treinar o NutriScan V1."
+        "Erro ao treinar o NutriScan V1.",
       );
 
     } finally {
 
       setTreinando(
-        false
+        false,
       );
 
     }
@@ -342,22 +377,22 @@ function App() {
   async function avaliarV1() {
 
     setAvaliando(
-      true
+      true,
     );
 
 
     setErro(
-      ""
+      "",
     );
 
 
     setResultadoAvaliacao(
-      null
+      null,
     );
 
 
     setProgressoAvaliacao(
-      "Preparando avaliação..."
+      "Preparando avaliação...",
     );
 
 
@@ -370,25 +405,25 @@ function App() {
 
           (
             atual,
-            total
+            total,
           ) => {
 
             setProgressoAvaliacao(
-              `Avaliando ${atual}/${total}`
+              `Avaliando ${atual}/${total}`,
             );
 
-          }
+          },
 
         );
 
 
       setResultadoAvaliacao(
-        resultado
+        resultado,
       );
 
 
       setProgressoAvaliacao(
-        "Avaliação da V1 concluída!"
+        "Avaliação da V1 concluída!",
       );
 
     } catch (
@@ -396,18 +431,18 @@ function App() {
     ) {
 
       console.error(
-        error
+        error,
       );
 
 
       setErro(
-        "Erro ao avaliar o NutriScan V1."
+        "Erro ao avaliar o NutriScan V1.",
       );
 
     } finally {
 
       setAvaliando(
-        false
+        false,
       );
 
     }
@@ -425,32 +460,39 @@ function App() {
       !arquivo ||
       !imagem
     ) {
+
       return;
+
     }
 
 
     setCarregando(
-      true
+      true,
     );
 
 
     setErro(
-      ""
+      "",
     );
 
 
     setResultadoNutriScan(
-      null
+      null,
     );
 
 
     setResultadoOCR(
-      null
+      null,
     );
 
 
     setDadosNutricionais(
-      null
+      null,
+    );
+
+
+    setAnaliseNutricional(
+      null,
     );
 
 
@@ -464,37 +506,35 @@ function App() {
         imagem;
 
 
-      await new Promise<void>(
-        (
-          resolve,
-          reject
-        ) => {
+      await new Promise<void>((
+        resolve,
+        reject,
+      ) => {
 
-          img.onload =
-            () =>
-              resolve();
+        img.onload =
+          () =>
+            resolve();
 
 
-          img.onerror =
-            () =>
-              reject(
-                new Error(
-                  "Erro ao carregar imagem."
-                )
-              );
+        img.onerror =
+          () =>
+            reject(
+              new Error(
+                "Erro ao carregar imagem.",
+              ),
+            );
 
-        }
-      );
+      });
 
 
       const resultado =
         await analisarComNutriScan(
-          img
+          img,
         );
 
 
       setResultadoNutriScan(
-        resultado
+        resultado,
       );
 
     } catch (
@@ -502,18 +542,18 @@ function App() {
     ) {
 
       console.error(
-        error
+        error,
       );
 
 
       setErro(
-        "Não foi possível analisar a imagem."
+        "Não foi possível analisar a imagem.",
       );
 
     } finally {
 
       setCarregando(
-        false
+        false,
       );
 
     }
@@ -522,7 +562,7 @@ function App() {
 
 
   // =====================================
-  // OCR
+  // OCR + ANÁLISE AUTOMÁTICA
   // =====================================
 
   async function lerTabelaNutricional() {
@@ -530,37 +570,44 @@ function App() {
     if (
       !imagem
     ) {
+
       return;
+
     }
 
 
     setLendoTexto(
-      true
+      true,
     );
 
 
     setErro(
-      ""
+      "",
     );
 
 
     setResultadoOCR(
-      null
+      null,
     );
 
 
     setDadosNutricionais(
-      null
+      null,
+    );
+
+
+    setAnaliseNutricional(
+      null,
     );
 
 
     setProgressoOCR(
-      "Preparando OCR..."
+      "Preparando OCR...",
     );
 
 
     setPercentualOCR(
-      0
+      0,
     );
 
 
@@ -574,45 +621,68 @@ function App() {
           dados => {
 
             setProgressoOCR(
-              dados.status
+              dados.status,
             );
 
 
             setPercentualOCR(
               Math.round(
                 dados.progresso *
-                100
-              )
+                100,
+              ),
             );
 
-          }
+          },
 
         );
 
 
       setResultadoOCR(
-        resultado
+        resultado,
       );
 
 
+      // ==================================
+      // PARSER
+      // ==================================
+
       const nutrientes =
         interpretarTabelaNutricional(
-          resultado.texto
+          resultado.texto,
         );
 
 
       setDadosNutricionais(
-        nutrientes
+        nutrientes,
+      );
+
+
+      // ==================================
+      // ANÁLISE AUTOMÁTICA
+      // ==================================
+
+      const analise =
+        analisarNutricionalmente(
+
+          nutrientes,
+
+          resultado.texto,
+
+        );
+
+
+      setAnaliseNutricional(
+        analise,
       );
 
 
       setProgressoOCR(
-        "Leitura concluída!"
+        "Análise concluída!",
       );
 
 
       setPercentualOCR(
-        100
+        100,
       );
 
     } catch (
@@ -620,18 +690,18 @@ function App() {
     ) {
 
       console.error(
-        error
+        error,
       );
 
 
       setErro(
-        "Não foi possível ler a tabela."
+        "Não foi possível ler e analisar a tabela.",
       );
 
     } finally {
 
       setLendoTexto(
-        false
+        false,
       );
 
     }
@@ -645,11 +715,10 @@ function App() {
 
   function mostrarValor(
     valor:
-      number |
-      null,
+      number | null,
 
     unidade:
-      string
+      string,
   ) {
 
     if (
@@ -666,6 +735,25 @@ function App() {
   }
 
 
+  function formatarNumero(
+    valor:
+      number,
+  ) {
+
+    return valor
+      .toFixed(2)
+      .replace(
+        /\.?0+$/,
+        "",
+      )
+      .replace(
+        ".",
+        ",",
+      );
+
+  }
+
+
   // =====================================
   // JSX
   // =====================================
@@ -675,204 +763,239 @@ function App() {
     <main className="app-container">
 
 
+      {/* ================================= */}
+      {/* CABEÇALHO */}
+      {/* ================================= */}
+
       <header>
 
         <h1>
           NutriScan AI
         </h1>
 
+
         <p>
-          TensorFlow.js + Transfer Learning + OCR
+          Análise inteligente de tabelas nutricionais
         </p>
 
       </header>
 
 
       {/* ================================= */}
-      {/* ÁREA DO DESENVOLVEDOR */}
+      {/* DESENVOLVEDOR */}
       {/* ================================= */}
 
-      <section>
+      <details
+        style={{
+          maxWidth:
+            "700px",
 
-        <h2>
-          NutriScan V1
-        </h2>
+          margin:
+            "20px auto",
 
+          padding:
+            "15px",
 
-        <p>
-          Treinamento reproduzível do
-          classificador.
-        </p>
+          border:
+            "1px solid #333",
 
+          borderRadius:
+            "12px",
+        }}
+      >
 
-        <button
-          onClick={
-            treinar
-          }
-          disabled={
-            treinando
-          }
-        >
-
-          {
-            treinando
-              ? "Treinando V1..."
-              : "Treinar NutriScan V1"
-          }
-
-        </button>
-
-
-        {
-          statusTreino && (
-
-            <p>
-              {
-                statusTreino
-              }
-            </p>
-
-          )
-        }
-
-
-        <button
-          onClick={
-            avaliarV1
-          }
-          disabled={
-            avaliando ||
-            treinando
-          }
+        <summary
           style={{
-            marginLeft:
-              "10px"
+            cursor:
+              "pointer",
+
+            fontWeight:
+              "bold",
           }}
         >
+          Ferramentas de desenvolvimento
+        </summary>
+
+
+        <section>
+
+          <h2>
+            NutriScan V1
+          </h2>
+
+
+          <p>
+            TensorFlow.js + Transfer Learning
+          </p>
+
+
+          <button
+            onClick={
+              treinar
+            }
+            disabled={
+              treinando
+            }
+          >
+
+            {
+              treinando
+                ? "Treinando..."
+                : "Treinar NutriScan V1"
+            }
+
+          </button>
+
 
           {
-            avaliando
-              ? "Avaliando..."
-              : "Avaliar NutriScan V1"
+            statusTreino && (
+
+              <p>
+                {
+                  statusTreino
+                }
+              </p>
+
+            )
           }
 
-        </button>
+
+          <button
+            onClick={
+              avaliarV1
+            }
+            disabled={
+              avaliando ||
+              treinando
+            }
+            style={{
+              marginLeft:
+                "10px",
+            }}
+          >
+
+            {
+              avaliando
+                ? "Avaliando..."
+                : "Avaliar NutriScan V1"
+            }
+
+          </button>
 
 
-        {
-          progressoAvaliacao && (
-
-            <p>
-              {
-                progressoAvaliacao
-              }
-            </p>
-
-          )
-        }
-
-
-        {
-          resultadoAvaliacao && (
-
-            <div
-              style={{
-                margin:
-                  "25px auto",
-
-                maxWidth:
-                  "600px"
-              }}
-            >
-
-              <h3>
-                Resultado da V1
-              </h3>
-
+          {
+            progressoAvaliacao && (
 
               <p>
-                Acurácia:{" "}
-                <strong>
-                  {
-                    (
-                      resultadoAvaliacao
-                        .acuracia *
-                      100
-                    ).toFixed(2)
-                  }
-                  %
-                </strong>
-              </p>
-
-
-              <p>
-                Precisão:{" "}
-                <strong>
-                  {
-                    (
-                      resultadoAvaliacao
-                        .precisao *
-                      100
-                    ).toFixed(2)
-                  }
-                  %
-                </strong>
-              </p>
-
-
-              <p>
-                Recall:{" "}
-                <strong>
-                  {
-                    (
-                      resultadoAvaliacao
-                        .recall *
-                      100
-                    ).toFixed(2)
-                  }
-                  %
-                </strong>
-              </p>
-
-
-              <p>
-                F1-score:{" "}
-                <strong>
-                  {
-                    (
-                      resultadoAvaliacao
-                        .f1Score *
-                      100
-                    ).toFixed(2)
-                  }
-                  %
-                </strong>
-              </p>
-
-
-              <p>
-                Falso positivo:{" "}
                 {
-                  resultadoAvaliacao
-                    .falsoPositivo
+                  progressoAvaliacao
                 }
               </p>
 
+            )
+          }
 
-              <p>
-                Falso negativo:{" "}
-                {
-                  resultadoAvaliacao
-                    .falsoNegativo
-                }
-              </p>
 
-            </div>
+          {
+            resultadoAvaliacao && (
 
-          )
-        }
+              <div
+                style={{
+                  margin:
+                    "25px auto",
+                }}
+              >
 
-      </section>
+                <h3>
+                  Resultado da V1
+                </h3>
+
+
+                <p>
+                  Acurácia:{" "}
+                  <strong>
+                    {
+                      (
+                        resultadoAvaliacao
+                          .acuracia *
+                        100
+                      ).toFixed(2)
+                    }
+                    %
+                  </strong>
+                </p>
+
+
+                <p>
+                  Precisão:{" "}
+                  <strong>
+                    {
+                      (
+                        resultadoAvaliacao
+                          .precisao *
+                        100
+                      ).toFixed(2)
+                    }
+                    %
+                  </strong>
+                </p>
+
+
+                <p>
+                  Recall:{" "}
+                  <strong>
+                    {
+                      (
+                        resultadoAvaliacao
+                          .recall *
+                        100
+                      ).toFixed(2)
+                    }
+                    %
+                  </strong>
+                </p>
+
+
+                <p>
+                  F1-score:{" "}
+                  <strong>
+                    {
+                      (
+                        resultadoAvaliacao
+                          .f1Score *
+                        100
+                      ).toFixed(2)
+                    }
+                    %
+                  </strong>
+                </p>
+
+
+                <p>
+                  Falso positivo:{" "}
+                  {
+                    resultadoAvaliacao
+                      .falsoPositivo
+                  }
+                </p>
+
+
+                <p>
+                  Falso negativo:{" "}
+                  {
+                    resultadoAvaliacao
+                      .falsoNegativo
+                  }
+                </p>
+
+              </div>
+
+            )
+          }
+
+        </section>
+
+      </details>
 
 
       <hr />
@@ -887,6 +1010,11 @@ function App() {
         <h2>
           Escâner de rótulo
         </h2>
+
+
+        <p>
+          Envie uma foto da tabela nutricional.
+        </p>
 
 
         <input
@@ -909,7 +1037,7 @@ function App() {
                   src={
                     imagem
                   }
-                  alt="Rótulo"
+                  alt="Tabela nutricional"
                   style={{
                     width:
                       "100%",
@@ -921,7 +1049,7 @@ function App() {
                       "20px",
 
                     borderRadius:
-                      "10px"
+                      "12px",
                   }}
                 />
 
@@ -937,7 +1065,7 @@ function App() {
                 }
                 style={{
                   marginTop:
-                    "20px"
+                    "20px",
                 }}
               >
 
@@ -957,18 +1085,22 @@ function App() {
       </section>
 
 
+      {/* ================================= */}
+      {/* CLASSIFICAÇÃO */}
+      {/* ================================= */}
+
       {
         resultadoNutriScan && (
 
           <section
             style={{
               marginTop:
-                "30px"
+                "30px",
             }}
           >
 
             <h2>
-              Resultado
+              Detecção
             </h2>
 
 
@@ -982,7 +1114,7 @@ function App() {
 
             <p>
 
-              Score:{" "}
+              Confiança do classificador:{" "}
 
               <strong>
 
@@ -998,16 +1130,6 @@ function App() {
 
               </strong>
 
-            </p>
-
-
-            <p>
-              Threshold utilizado:{" "}
-              {
-                resultadoNutriScan
-                  .limiarUtilizado
-                  .toFixed(2)
-              }
             </p>
 
 
@@ -1027,8 +1149,8 @@ function App() {
 
                   {
                     lendoTexto
-                      ? "Lendo..."
-                      : "Ler tabela nutricional"
+                      ? "Analisando tabela..."
+                      : "Analisar tabela nutricional"
                   }
 
                 </button>
@@ -1042,14 +1164,19 @@ function App() {
       }
 
 
+      {/* ================================= */}
+      {/* PROGRESSO */}
+      {/* ================================= */}
+
       {
         progressoOCR && (
 
           <section>
 
             <h3>
-              OCR
+              Processamento
             </h3>
+
 
             <p>
 
@@ -1074,218 +1201,751 @@ function App() {
 
 
       {/* ================================= */}
-      {/* NUTRIENTES */}
+      {/* RESULTADO PRINCIPAL */}
       {/* ================================= */}
 
       {
-        dadosNutricionais && (
+        analiseNutricional && (
 
           <section
             style={{
               maxWidth:
-                "600px",
+                "720px",
 
               margin:
                 "40px auto",
 
+              padding:
+                "28px",
+
+              border:
+                "1px solid #444",
+
+              borderRadius:
+                "18px",
+
               textAlign:
-                "left"
+                "left",
             }}
           >
 
-            <h2
+
+            {/* STATUS */}
+
+            <div
               style={{
                 textAlign:
-                  "center"
+                  "center",
+
+                marginBottom:
+                  "30px",
               }}
             >
-              Informações nutricionais
-            </h2>
 
+              <div
+                style={{
+                  fontSize:
+                    "42px",
+                }}
+              >
 
-            <p>
-              🔥 Energia:{" "}
-              <strong>
                 {
-                  mostrarValor(
-                    dadosNutricionais
-                      .energiaKcal,
-
-                    "kcal"
-                  )
+                  analiseNutricional
+                    .status ===
+                    "favoravel"
+                    ? "🟢"
+                    : analiseNutricional
+                        .status ===
+                        "atencao"
+                      ? "⚠️"
+                      : analiseNutricional
+                          .status ===
+                          "parcial"
+                        ? "🟡"
+                        : "📷"
                 }
-              </strong>
-            </p>
+
+              </div>
 
 
-            <p>
-              ⚡ Energia:{" "}
-              <strong>
+              <h2>
                 {
-                  mostrarValor(
-                    dadosNutricionais
-                      .energiaKj,
-
-                    "kJ"
-                  )
+                  analiseNutricional
+                    .titulo
                 }
-              </strong>
-            </p>
+              </h2>
 
 
-            <p>
-              🥑 Gorduras:{" "}
-              <strong>
+              <p>
                 {
-                  mostrarValor(
-                    dadosNutricionais
-                      .gordura,
-
-                    "g"
-                  )
+                  analiseNutricional
+                    .descricao
                 }
-              </strong>
-            </p>
+              </p>
+
+            </div>
 
 
-            <p>
-              Gorduras saturadas:{" "}
-              <strong>
-                {
-                  mostrarValor(
-                    dadosNutricionais
-                      .gorduraSaturada,
+            {/* PROTEÍNA */}
 
-                    "g"
-                  )
-                }
-              </strong>
-            </p>
-
-
-            <p>
-              🍞 Carboidratos:{" "}
-              <strong>
-                {
-                  mostrarValor(
-                    dadosNutricionais
-                      .carboidratos,
-
-                    "g"
-                  )
-                }
-              </strong>
-            </p>
-
-
-            <p>
-              🍬 Açúcares:{" "}
-              <strong>
-                {
-                  mostrarValor(
-                    dadosNutricionais
-                      .acucares,
-
-                    "g"
-                  )
-                }
-              </strong>
-            </p>
-
-
-            <p>
-              🌾 Fibra:{" "}
-              <strong>
-                {
-                  mostrarValor(
-                    dadosNutricionais
-                      .fibra,
-
-                    "g"
-                  )
-                }
-              </strong>
-            </p>
-
-
-            <p>
-              💪 Proteína:{" "}
-              <strong>
-                {
-                  mostrarValor(
-                    dadosNutricionais
-                      .proteina,
-
-                    "g"
-                  )
-                }
-              </strong>
-            </p>
-
-          </section>
-
-        )
-      }
-
-
-      {
-        resultadoOCR && (
-
-          <section>
-
-            <h2>
-              Texto bruto OCR
-            </h2>
-
-
-            <p>
-              Confiança média:{" "}
-              {
-                resultadoOCR
-                  .confianca
-                  .toFixed(2)
-              }
-              %
-            </p>
-
-
-            <pre
+            <div
               style={{
-                maxWidth:
-                  "700px",
-
-                margin:
-                  "20px auto",
-
                 padding:
-                  "20px",
+                  "18px",
 
                 border:
                   "1px solid #444",
 
                 borderRadius:
-                  "10px",
+                  "12px",
 
-                whiteSpace:
-                  "pre-wrap",
-
-                textAlign:
-                  "left"
+                marginBottom:
+                  "18px",
               }}
             >
 
+              <h3>
+                💪 Proteína
+              </h3>
+
+
               {
-                resultadoOCR
-                  .texto
+                analiseNutricional
+                  .proteina
+                  .valor !==
+                  null
+                  ? (
+
+                    <>
+
+                      <p
+                        style={{
+                          fontSize:
+                            "22px",
+                        }}
+                      >
+
+                        <strong>
+
+                          {
+                            formatarNumero(
+                              analiseNutricional
+                                .proteina
+                                .valor,
+                            )
+                          }
+
+                          {" "}g
+
+                        </strong>
+
+                        {" "}
+
+                        {
+                          analiseNutricional
+                            .proteina
+                            .referencia
+                        }
+
+                      </p>
+
+
+                      <p>
+
+                        {
+                          analiseNutricional
+                            .proteina
+                            .nivel ===
+                            "boa"
+                            ? "✅ "
+                            : ""
+                        }
+
+                        {
+                          analiseNutricional
+                            .proteina
+                            .mensagem
+                        }
+
+                      </p>
+
+                    </>
+
+                  )
+                  : (
+
+                    <p>
+                      Proteína não identificada.
+                    </p>
+
+                  )
               }
 
-            </pre>
+            </div>
+
+
+            {/* ALERTAS */}
+
+            {
+              analiseNutricional
+                .alertas.length >
+                0 && (
+
+                <div>
+
+                  <h3>
+                    ⚠️ Pontos de atenção
+                  </h3>
+
+
+                  {
+                    analiseNutricional
+                      .alertas.map(
+                        alerta => (
+
+                          <div
+                            key={
+                              alerta
+                                .nutriente
+                            }
+                            style={{
+                              padding:
+                                "16px",
+
+                              border:
+                                "1px solid #a44",
+
+                              borderRadius:
+                                "12px",
+
+                              marginBottom:
+                                "12px",
+                            }}
+                          >
+
+                            <strong>
+                              🔴 {
+                                alerta
+                                  .titulo
+                              }
+                            </strong>
+
+
+                            <p>
+
+                              {
+                                formatarNumero(
+                                  alerta
+                                    .valor,
+                                )
+                              }
+
+                              {" "}
+
+                              {
+                                alerta
+                                  .unidade
+                              }
+
+                            </p>
+
+
+                            <small>
+
+                              Limite de alto teor:{" "}
+
+                              {
+                                formatarNumero(
+                                  alerta
+                                    .limite,
+                                )
+                              }
+
+                              {" "}
+
+                              {
+                                alerta
+                                  .unidade
+                              }
+
+                            </small>
+
+                          </div>
+
+                        ),
+                      )
+                  }
+
+                </div>
+
+              )
+            }
+
+
+            {/* PONTOS POSITIVOS */}
+
+            {
+              analiseNutricional
+                .pontosPositivos
+                .length >
+                0 && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "25px",
+                  }}
+                >
+
+                  <h3>
+                    ✅ Pontos positivos
+                  </h3>
+
+
+                  {
+                    analiseNutricional
+                      .pontosPositivos
+                      .map(
+                        (
+                          ponto,
+                          index,
+                        ) => (
+
+                          <p
+                            key={
+                              `${ponto}-${index}`
+                            }
+                          >
+                            ✅ {ponto}
+                          </p>
+
+                        ),
+                      )
+                  }
+
+                </div>
+
+              )
+            }
+
+
+            {/* DADOS NÃO IDENTIFICADOS */}
+
+            {
+              analiseNutricional
+                .observacoes
+                .length >
+                0 && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "25px",
+
+                    opacity:
+                      0.85,
+                  }}
+                >
+
+                  <h3>
+                    Informações
+                  </h3>
+
+
+                  {
+                    analiseNutricional
+                      .observacoes
+                      .map(
+                        (
+                          item,
+                          index,
+                        ) => (
+
+                          <p
+                            key={
+                              `${item}-${index}`
+                            }
+                          >
+                            • {item}
+                          </p>
+
+                        ),
+                      )
+                  }
+
+                </div>
+
+              )
+            }
+
+
+            {
+              !analiseNutricional
+                .podeConcluir && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "25px",
+
+                    padding:
+                      "18px",
+
+                    border:
+                      "1px solid #d99",
+
+                    borderRadius:
+                      "12px",
+
+                    textAlign:
+                      "center",
+                  }}
+                >
+
+                  📷 Tire outra foto mais próxima,
+                  nítida e sem reflexo para tentar
+                  novamente.
+
+                </div>
+
+              )
+            }
+
+
+            <p
+              style={{
+                marginTop:
+                  "30px",
+
+                fontSize:
+                  "12px",
+
+                opacity:
+                  0.65,
+
+                textAlign:
+                  "center",
+              }}
+            >
+
+              A avaliação considera os nutrientes
+              identificados na tabela e os critérios
+              de alto teor para açúcares adicionados,
+              gordura saturada e sódio. Não substitui
+              avaliação nutricional profissional.
+
+            </p>
 
           </section>
 
         )
       }
 
+
+      {/* ================================= */}
+      {/* NUTRIENTES EXTRAÍDOS */}
+      {/* ================================= */}
+
+      {
+        dadosNutricionais && (
+
+          <details
+            style={{
+              maxWidth:
+                "700px",
+
+              margin:
+                "30px auto",
+            }}
+          >
+
+            <summary
+              style={{
+                cursor:
+                  "pointer",
+
+                fontWeight:
+                  "bold",
+              }}
+            >
+              Ver nutrientes identificados
+            </summary>
+
+
+            <section
+              style={{
+                textAlign:
+                  "left",
+
+                padding:
+                  "20px",
+              }}
+            >
+
+              <p>
+                🔥 Energia:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .energiaKcal,
+
+                      "kcal",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                🍞 Carboidratos:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .carboidratos,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                🍬 Açúcares totais:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .acucaresTotais,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                🍭 Açúcares adicionados:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .acucaresAdicionados,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                💪 Proteínas:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .proteina,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                🥑 Gorduras totais:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .gordura,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                Gordura saturada:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .gorduraSaturada,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                Gordura trans:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .gorduraTrans,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                🌾 Fibra alimentar:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .fibra,
+
+                      "g",
+                    )
+                  }
+                </strong>
+              </p>
+
+
+              <p>
+                🧂 Sódio:{" "}
+                <strong>
+                  {
+                    mostrarValor(
+                      dadosNutricionais
+                        .sodio,
+
+                      "mg",
+                    )
+                  }
+                </strong>
+              </p>
+
+            </section>
+
+          </details>
+
+        )
+      }
+
+
+      {/* ================================= */}
+      {/* OCR DEBUG */}
+      {/* ================================= */}
+
+      {
+        resultadoOCR && (
+
+          <details
+            style={{
+              maxWidth:
+                "760px",
+
+              margin:
+                "30px auto",
+            }}
+          >
+
+            <summary
+              style={{
+                cursor:
+                  "pointer",
+
+                fontWeight:
+                  "bold",
+              }}
+            >
+              Detalhes técnicos do OCR
+            </summary>
+
+
+            <section>
+
+              <p>
+
+                Confiança média:{" "}
+
+                {
+                  resultadoOCR
+                    .confianca
+                    .toFixed(2)
+                }
+
+                %
+
+              </p>
+
+
+              <p>
+
+                Estratégia utilizada:{" "}
+
+                <strong>
+
+                  {
+                    resultadoOCR
+                      .modo ??
+                    "não informado"
+                  }
+
+                </strong>
+
+              </p>
+
+
+              <pre
+                style={{
+                  maxWidth:
+                    "700px",
+
+                  margin:
+                    "20px auto",
+
+                  padding:
+                    "20px",
+
+                  border:
+                    "1px solid #444",
+
+                  borderRadius:
+                    "10px",
+
+                  whiteSpace:
+                    "pre-wrap",
+
+                  textAlign:
+                    "left",
+                }}
+              >
+
+                {
+                  resultadoOCR
+                    .texto
+                }
+
+              </pre>
+
+            </section>
+
+          </details>
+
+        )
+      }
+
+
+      {/* ================================= */}
+      {/* ERRO */}
+      {/* ================================= */}
 
       {
         erro && (
@@ -1293,7 +1953,10 @@ function App() {
           <p
             style={{
               color:
-                "#ff6b6b"
+                "#ff6b6b",
+
+              fontWeight:
+                "bold",
             }}
           >
 
